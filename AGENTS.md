@@ -8,6 +8,7 @@ This repository follows the conventions below so that automated agents and human
 - Keep package and directory names lower_snake (`pkg/controller`, `pkg/auth`); exported identifiers use PascalCase and begin with a leading doc comment.
 - Mirror configuration struct fields to their YAML keys using lowerCamel case, and keep generated protobuf clients under `api/`—regenerate them with `buf`/`protoc` instead of editing manually.
 - Place table-driven tests in `_test.go` files alongside the code; name suites `Test<Feature><Scenario>` and use `t.Run` for edge cases so `go test ./...` stays readable for agents.
+- Add copyright headers (`// Copyright © 2025 ...`) to every Go file and include descriptive package/element comments so `go doc` output stays informative.
 
 ## Commit & Pull Request Guidelines
 - Configure git author info and sign every commit with `git commit -s`; the signed-off trailer is required for compliance.
