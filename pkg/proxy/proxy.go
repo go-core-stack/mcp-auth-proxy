@@ -113,7 +113,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := p.forwardRequest(r)
+	resp, err := p.forwardRequest(r, event)
 	if err != nil {
 		status := http.StatusBadGateway
 		var httpErr *httpError
@@ -128,7 +128,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		if closeErr := resp.Body.Close(); closeErr != nil {
+			event.Error().
+				Err(closeErr).
+				Msg("close upstream response body failed")
+		}
+	}()
 
 	// Default to streaming the upstream body unless we need to inspect errors.
 	var bodyReader io.Reader = resp.Body
@@ -168,12 +174,18 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // forwardRequest clones the inbound request, augments headers, signs it, and
 // returns the upstream response for the caller to stream back.
-func (p *Proxy) forwardRequest(r *http.Request) (*http.Response, error) {
+func (p *Proxy) forwardRequest(r *http.Request, event zerolog.Logger) (*http.Response, error) {
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("read request body: %w", err)
 	}
-	defer r.Body.Close()
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			event.Error().
+				Err(err).
+				Msg("close request body failed")
+		}
+	}()
 
 	targetURL := p.singleJoiningURL(r.URL)
 
