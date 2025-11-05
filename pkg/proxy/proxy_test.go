@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -56,16 +57,21 @@ func TestProxyForwardsAndSignsRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create proxy: %v", err)
 	}
-	p := handler.(*Proxy)
+	p, ok := handler.(*Proxy)
+	if !ok {
+		t.Fatalf("expected *Proxy, got %T", handler)
+	}
 
 	// Fix the timestamp so the signature can be asserted.
 	fixedNow := time.Unix(1700000000, 0).UTC()
 	p.signer.Now = func() time.Time { return fixedNow }
 
 	p.client.Transport = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-		defer req.Body.Close()
 		body, err := io.ReadAll(req.Body)
 		if err != nil {
+			return nil, err
+		}
+		if err := req.Body.Close(); err != nil {
 			return nil, err
 		}
 		receivedMethod = req.Method
@@ -120,7 +126,10 @@ func TestProxyForwardsAndSignsRequests(t *testing.T) {
 func TestProxyServeEventStreamFallback(t *testing.T) {
 	var outboundCalls int32
 
-	upstreamURL, _ := url.Parse("https://upstream.example.com")
+	upstreamURL, err := url.Parse("https://upstream.example.com")
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
 
 	cfg := config.Config{
 		ListenAddr:              "127.0.0.1:0",
@@ -140,7 +149,10 @@ func TestProxyServeEventStreamFallback(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create proxy: %v", err)
 	}
-	p := handler.(*Proxy)
+	p, ok := handler.(*Proxy)
+	if !ok {
+		t.Fatalf("expected *Proxy, got %T", handler)
+	}
 
 	p.client.Transport = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		atomic.AddInt32(&outboundCalls, 1)
@@ -188,7 +200,10 @@ func TestProxyServeEventStreamFallback(t *testing.T) {
 func TestProxyDiscoveryReturnsNotFound(t *testing.T) {
 	var outboundCalls int32
 
-	upstreamURL, _ := url.Parse("https://upstream.example.com")
+	upstreamURL, err := url.Parse("https://upstream.example.com")
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
 
 	cfg := config.Config{
 		ListenAddr:              "127.0.0.1:0",
@@ -208,7 +223,10 @@ func TestProxyDiscoveryReturnsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create proxy: %v", err)
 	}
-	p := handler.(*Proxy)
+	p, ok := handler.(*Proxy)
+	if !ok {
+		t.Fatalf("expected *Proxy, got %T", handler)
+	}
 
 	p.client.Transport = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		atomic.AddInt32(&outboundCalls, 1)
@@ -229,7 +247,10 @@ func TestProxyDiscoveryReturnsNotFound(t *testing.T) {
 }
 
 func TestProxyPropagatesErrorBodies(t *testing.T) {
-	upstreamURL, _ := url.Parse("https://upstream.example.com")
+	upstreamURL, err := url.Parse("https://upstream.example.com")
+	if err != nil {
+		t.Fatalf("parse upstream url: %v", err)
+	}
 
 	cfg := config.Config{
 		ListenAddr:              "127.0.0.1:0",
@@ -249,7 +270,10 @@ func TestProxyPropagatesErrorBodies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create proxy: %v", err)
 	}
-	p := handler.(*Proxy)
+	p, ok := handler.(*Proxy)
+	if !ok {
+		t.Fatalf("expected *Proxy, got %T", handler)
+	}
 
 	p.client.Transport = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
 		return &http.Response{
@@ -274,7 +298,10 @@ func TestProxyPropagatesErrorBodies(t *testing.T) {
 
 func computeSignature(secret, method, path, timestamp string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
-	_, _ = mac.Write([]byte(strings.Join([]string{method, path, timestamp}, "\n")))
+	payload := strings.Join([]string{method, path, timestamp}, "\n")
+	if _, err := mac.Write([]byte(payload)); err != nil {
+		panic(fmt.Sprintf("write signature payload: %v", err))
+	}
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
