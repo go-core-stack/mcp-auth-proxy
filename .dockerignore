@@ -1,0 +1,8 @@
+.git
+vendor
+node_modules
+.env
+build
+dist
+*.md
+.gitignore
