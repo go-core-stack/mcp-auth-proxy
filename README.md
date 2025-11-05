@@ -27,7 +27,7 @@ export MCP_API_SECRET="your-api-secret"
 # export MCP_LISTEN_ADDR="127.0.0.1:8080"
 # export MCP_REQUEST_TIMEOUT="20s"
 
-go run ./cmd/auth-proxy
+go run .
 ```
 
 Point your local MCP-capable agent (Codex, Claude, etc.) at `http://127.0.0.1:8080`; the proxy will sign requests with HMAC headers before forwarding them to the upstream service.
