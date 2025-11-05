@@ -10,7 +10,7 @@ This document captures the initial plan for building a local MCP authentication 
 ## 2. Architecture Overview
 - Components: local MCP listener, proxy core, outbound auth injector, configuration loader, observability layer.
 - Draft request flow diagrams covering success, missing auth, upstream errors, and retry scenarios.
-- Adopt Go package layout `cmd/auth-proxy`, `pkg/proxy`, `pkg/auth`, `pkg/config`, `pkg/metrics` mirroring `auth-gateway` conventions.
+- Adopt Go package layout with a top-level `main.go` entrypoint alongside `pkg/proxy`, `pkg/auth`, `pkg/config`, `pkg/metrics` mirroring `auth-gateway` conventions.
 
 ## 3. Configuration & Secrets
 - Environment variables: `MCP_UPSTREAM_URL`, `MCP_API_KEY`, `MCP_API_SECRET`, `MCP_LISTEN_ADDR`, timeouts.
@@ -20,7 +20,7 @@ This document captures the initial plan for building a local MCP authentication 
 ## 4. Local Server Scaffolding
 - Use `net/http` to expose a local HTTP endpoint compatible with existing MCP agents; evaluate TLS termination as a follow-up.
 - Implement canonical routes that accept MCP JSON-RPC payloads and forward them upstream.
-- Configure connection pooling, sane read/write timeouts, and graceful shutdown hooks. **Status:** Implemented via `cmd/auth-proxy/main.go` with graceful shutdown support.
+- Configure connection pooling, sane read/write timeouts, and graceful shutdown hooks. **Status:** Implemented via `main.go` with graceful shutdown support.
 
 ## 5. Authentication Middleware
 - Reproduce `auth-gateway` signature logic: timestamp, HMAC signature, and header injection. **Status:** Implemented in `pkg/auth/signer.go`.
